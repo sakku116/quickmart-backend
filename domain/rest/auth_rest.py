@@ -58,3 +58,7 @@ class CheckTokenReq:
 
 class CheckTokenRespData(auth_dto.CurrentUser):
     pass
+
+@dataclass
+class VerifyEmailOTPReq:
+    otp_code: str = Form()

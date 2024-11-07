@@ -13,6 +13,7 @@ class PublicUserModel(BaseModel):
     fullname: str = ""
     username: str = ""
     email: str = ""
+    email_verified: bool = False
     phone_number: str = ""
     gender: Literal[USER_GENDER_ENUMS] = "male"
     birth_date: Optional[str] = None # DD-MM-YYYY

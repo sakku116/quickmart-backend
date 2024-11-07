@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Callable
+from typing import Callable, Literal
 
 import jwt
 from fastapi import Depends
@@ -7,9 +7,9 @@ from config.env import Env
 from core.exceptions.http import CustomHttpException
 from core.logging import logger
 from domain.dto import auth_dto
-from domain.model import refresh_token_model, user_model
+from domain.model import refresh_token_model, user_model, otp_model
 from domain.rest import auth_rest
-from repository import refresh_token_repo, user_repo
+from repository import refresh_token_repo, user_repo, otp_repo
 from utils import bcrypt as bcrypt_utils
 from utils import helper
 from utils import jwt as jwt_utils
@@ -21,11 +21,13 @@ class AuthService:
         self,
         user_repo: user_repo.UserRepo = Depends(),
         refresh_token_repo: refresh_token_repo.RefreshTokenRepo = Depends(),
-        email_util: email_util.GmailEmailClient = Depends(),
+        email_util: email_util.EmailUtil = Depends(),
+        otp_repo: otp_repo.OtpRepo = Depends(),
     ):
         self.user_repo = user_repo
         self.refresh_token_repo = refresh_token_repo
         self.email_util = email_util
+        self.otp_repo = otp_repo
 
     def login(self, payload: auth_rest.LoginReq) -> auth_rest.LoginResp:
         # check if input is email
@@ -55,7 +57,7 @@ class AuthService:
         jwt_payload = auth_dto.JwtPayload(
             **user.model_dump(),
             sub=user.id,
-            exp=datetime.utcnow() + timedelta(hours=Env.TOKEN_EXPIRES_HOURS)
+            exp=datetime.utcnow() + timedelta(hours=Env.TOKEN_EXPIRES_HOURS),
         )
         jwt_token = jwt_utils.encodeToken(
             payload=jwt_payload.model_dump(), secret=Env.JWT_SECRET_KEY
@@ -108,7 +110,7 @@ class AuthService:
         jwt_payload = auth_dto.JwtPayload(
             **user.model_dump(),
             sub=user.id,
-            exp=datetime.utcnow() + timedelta(hours=Env.TOKEN_EXPIRES_HOURS)
+            exp=datetime.utcnow() + timedelta(hours=Env.TOKEN_EXPIRES_HOURS),
         )
         jwt_token = jwt_utils.encodeToken(
             payload=jwt_payload.model_dump(), secret=Env.JWT_SECRET_KEY
@@ -160,13 +162,15 @@ class AuthService:
 
         # update last_active
         time_now = helper.timeNowEpoch()
-        self.user_repo.updateLastActive(id=claims.sub, last_active=time_now)
+        user = self.user_repo.updateLastActive(id=claims.sub, last_active=time_now)
 
-        result = auth_dto.CurrentUser(**claims.model_dump())
+        result = auth_dto.CurrentUser(**user.model_dump())
 
         return result
 
-    def checkToken(self, payload: auth_rest.CheckTokenReq) -> auth_rest.CheckTokenRespData:
+    def checkToken(
+        self, payload: auth_rest.CheckTokenReq
+    ) -> auth_rest.CheckTokenRespData:
         data = self.verifyToken(token=payload.access_token.removeprefix("Bearer "))
         return auth_rest.CheckTokenRespData(**data.model_dump())
 
@@ -188,9 +192,7 @@ class AuthService:
 
         # validate email
         if "@" not in payload.email:
-            exc = CustomHttpException(
-                status_code=400, message="Invalid email address"
-            )
+            exc = CustomHttpException(status_code=400, message="Invalid email address")
             logger.error(exc)
             raise exc
 
@@ -242,7 +244,7 @@ class AuthService:
         jwt_payload = auth_dto.JwtPayload(
             **new_user.model_dump(),
             sub=new_user.id,
-            exp=datetime.utcnow() + timedelta(hours=Env.TOKEN_EXPIRES_HOURS)
+            exp=datetime.utcnow() + timedelta(hours=Env.TOKEN_EXPIRES_HOURS),
         )
         jwt_token = jwt_utils.encodeToken(
             payload=jwt_payload.model_dump(), secret=Env.JWT_SECRET_KEY
@@ -268,4 +270,94 @@ class AuthService:
         )
         return result
 
-    # def verifyEmail(self, payload.)
+    def sendVerifyEmailOTP(self, current_user: auth_dto.CurrentUser):
+        # check if email already verified
+        if current_user.email_verified:
+            exc = CustomHttpException(status_code=400, message="Email already verified")
+            logger.error(exc)
+            raise exc
+
+        # check if any active otp exist
+        otp = self.otp_repo.getLatestByCreatedBy(created_by=current_user.id)
+        if otp:
+            # delete
+            self.otp_repo.delete(id=otp.id)
+
+        # create new otp
+        time_now = helper.timeNowEpoch()
+        new_otp = otp_model.OtpModel(
+            id=helper.generateUUID4(),
+            created_at=time_now,
+            created_by=current_user.id,
+            code=helper.generateRandomNumber(length=6),
+        )
+
+        self.otp_repo.create(data=new_otp)
+
+        # check current user's email
+        if not current_user.email:
+            exc = CustomHttpException(
+                status_code=400,
+                message="User email not configured, please update your profile",
+            )
+            logger.error(exc)
+            raise exc
+
+        # send email
+        try:
+            self.email_util.send_email(
+                subject="Quickmart Email Verification",
+                body=f"Your OTP is {new_otp.code}",
+                recipient=current_user.email,
+            )
+        except Exception as e:
+            exc = CustomHttpException(
+                status_code=500, message="Failed to send email", detail=str(e)
+            )
+            logger.error(exc)
+            raise exc
+
+    def verifyEmailOTP(
+        self, current_user: auth_dto.CurrentUser, payload: auth_rest.VerifyEmailOTPReq
+    ):
+        _params = {
+            "current_user.id": current_user.id,
+        }
+
+        otp = self.otp_repo.getLatestByCreatedBy(created_by=current_user.id)
+        if not otp:
+            exc = CustomHttpException(
+                status_code=400, message="OTP not found", context=_params
+            )
+            logger.error(exc)
+            raise exc
+
+        if helper.isExpired(otp.created_at, expr_seconds=Env.OTP_EXPIRES_SECONDS):
+            exc = CustomHttpException(
+                status_code=400, message="OTP expired", context=_params
+            )
+            logger.error(exc)
+            raise exc
+
+        if payload.otp_code != otp.code:
+            exc = CustomHttpException(
+                status_code=400, message="Invalid OTP", context=_params
+            )
+            logger.error(exc)
+            raise exc
+
+        # delete otp
+        self.otp_repo.delete(id=otp.id)
+
+        # update user's email verified
+        user = self.user_repo.getById(id=current_user.id)
+        if not user:
+            exc = CustomHttpException(
+                status_code=404, message="User not found", context=_params
+            )
+            logger.error(exc)
+            raise exc
+
+        user.email_verified = True
+        user.updated_at = helper.timeNowEpoch()
+        self.user_repo.update(id=user.id, data=user)

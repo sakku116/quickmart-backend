@@ -27,7 +27,7 @@ def setupLogger():
     logger_stream_handler.setLevel(logging.DEBUG if Env.DEBUG else logging.INFO)
     logger_stream_handler.setFormatter(
         logging.Formatter(
-            "%(asctime)s %(levelname)s: \033[92m[%(pathname)s@%(funcName)s():%(lineno)d] %(message)s",
+            "%(asctime)s %(levelname)s: \033[92m[%(pathname)s@%(funcName)s():%(lineno)d] %(message)s\033[0m",
             datefmt="%d-%m-%Y %H:%M:%S",
         )
     )

@@ -25,10 +25,20 @@ class CustomHttpException(Exception):
     ```
     and automatically change response.status_code to exc.status_code
     """
-    def __init__(self, status_code=500, message="exception", data=None, detail=""):
+    def __init__(self, status_code=500, message="exception", data=None, detail="", context: dict = None):
         self.status_code = status_code
         self.message = message
         self.data = data
         self.detail = detail
 
-        super().__init__(f"{message}\n{detail}")
+        msg = f"{message}"
+        if detail:
+            msg = f"\nmsg: {message}\ndetail: {detail}"
+
+        if context:
+            if not detail:
+                msg += f" | {context}"
+            else:
+                msg += f"\ncontext: {context}"
+
+        super().__init__(msg)

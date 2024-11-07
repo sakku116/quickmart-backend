@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends
 
 from domain.rest import auth_rest, generic_resp
 from service import auth_service
+from domain.dto import auth_dto
+from core.dependencies import verifyToken
 
 AuthRouter = APIRouter(
     prefix="/auth",
@@ -61,3 +63,25 @@ def check_token(
 ):
     resp = auth_service.checkToken(payload=payload)
     return generic_resp.RespData[auth_rest.CheckTokenRespData](data=resp)
+
+
+@AuthRouter.post(
+    "/verify-email/send-otp", response_model=generic_resp.RespData
+)
+def verify_email_send_otp(
+    current_user: auth_dto.CurrentUser = Depends(verifyToken),
+    auth_service: auth_service.AuthService = Depends(),
+):
+    auth_service.sendVerifyEmailOTP(current_user=current_user)
+    return generic_resp.RespData()
+
+@AuthRouter.post(
+    "/verify-email/verify-otp", response_model=generic_resp.RespData
+)
+def verify_email_verify_otp(
+    current_user: auth_dto.CurrentUser = Depends(verifyToken),
+    payload: auth_rest.VerifyEmailOTPReq = Depends(),
+    auth_service: auth_service.AuthService = Depends(),
+):
+    auth_service.verifyEmailOTP(current_user=current_user, payload=payload)
+    return generic_resp.RespData()

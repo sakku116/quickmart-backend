@@ -19,6 +19,5 @@ async def verifyToken(
     auth_service: auth_service.AuthService = Depends(),
     token: str = Depends(reusable_token),
 ) -> auth_dto.CurrentUser:
-    logger.info(f"Verifying token: {token}")
     current_user = auth_service.verifyToken(token=token)
     return current_user

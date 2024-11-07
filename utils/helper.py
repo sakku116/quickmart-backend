@@ -1,6 +1,8 @@
 import time
 import json
 from uuid import uuid4
+from datetime import datetime
+import random
 
 
 def parseBool(source: any) -> bool:
@@ -14,7 +16,7 @@ def generateSkip(page: int, limit: int) -> int:
 
 
 def timeNowEpoch() -> int:
-    return int(time.time())
+    return int(datetime.utcnow().timestamp())
 
 
 def prettyJson(data: any) -> str:
@@ -29,3 +31,18 @@ def limitString(input: str, limit: int = 200) -> str:
 
 def generateUUID4() -> str:
     return str(uuid4())
+
+def generateRandomNumber(length: int = 10) -> str:
+    return "".join([str(random.randint(0, 9)) for _ in range(length)])
+
+def isExpired(created_at: int, expr_hours: int = None, expr_seconds: int = None) -> bool:
+    if not expr_hours and not expr_seconds:
+        raise ValueError("Either 'expr_hours' or 'expr_seconds' must be provided.")
+    current_time = int(datetime.utcnow().timestamp())  # Get current time in epoch format
+    if expr_hours:
+        expiration_time = created_at + (
+            expr_hours * 3600
+        )
+    elif expr_seconds:
+        expiration_time = created_at + expr_seconds
+    return current_time > expiration_time

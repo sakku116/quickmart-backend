@@ -6,4 +6,7 @@ class EmailUtil:
         self.gmail_email_client = gmail_email_client
 
     def send_email(self, subject: str, body: str, recipient: str):
-        self.gmail_email_client.send_email(subject, body, recipient)
+        if "@gmail" in recipient:
+            self.gmail_email_client.send_email(subject, body, recipient)
+        else:
+            raise ValueError(f"email not supported")

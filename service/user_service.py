@@ -6,8 +6,8 @@ from core.logging import logger
 from domain.rest import user_rest
 from core.exceptions.http import CustomHttpException
 from utils import bcrypt as bcrypt_utils
-from pydantic import ValidationError
 from datetime import datetime
+from utils import helper
 
 
 class UserService:
@@ -20,6 +20,7 @@ class UserService:
     def updateProfile(
         self, user_id: str, payload: user_rest.UpdateProfileReq
     ) -> user_rest.UpdateProfileRespData:
+        logger.debug(f"payload: {payload}")
         user = self.user_repo.getById(id=user_id)
         if not user:
             exc = CustomHttpException(status_code=404, message="User not found")
@@ -81,6 +82,7 @@ class UserService:
 
         if payload.email != None:
             user.email = payload.email
+            user.email_verified = False
 
         if payload.phone_number != None:
             user.phone_number = payload.phone_number
@@ -92,12 +94,17 @@ class UserService:
             user.birth_date = payload.birth_date
 
         # re-validate user
-        user.model_validate()  # dont need to raise exception because ValidationError automatically handled by exceptions handler
+        user.model_validate(user)  # dont need to raise exception because ValidationError automatically handled by exceptions handler
 
         # update user
-        user.updated_at = datetime.now()
+        user.updated_at = helper.timeNowEpoch()
         user.updated_by = user_id
-        self.user_repo.update(id=user.id, data=user)
+        user = self.user_repo.update(id=user.id, data=user)
+        logger.debug(f"updated_user: {user}")
+        if not user:
+            exc = CustomHttpException(status_code=500, message="Failed to update user")
+            logger.error(exc)
+            raise exc
 
         return user_rest.UpdateProfileRespData(**user.model_dump())
 
@@ -150,7 +157,7 @@ class UserService:
             raise exc
 
         # update user
-        user.updated_at = datetime.now()
+        user.updated_at = helper.timeNowEpoch()
         user.updated_by = user_id
         user.password = bcrypt_utils.hashPassword(payload.new_password)
         self.user_repo.update(id=user.id, data=user)

@@ -55,7 +55,7 @@ class EmailClient:
             cls.reconnect()
             raise e
 
-        logger.info("Email sent successfully!")
+        logger.debug(f"Email sent successfully to {recipient}!")
 
     @classmethod
     def close(cls):

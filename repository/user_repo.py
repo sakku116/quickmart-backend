@@ -23,6 +23,15 @@ class UserRepo:
 
         return user_model.UserModel(**_return) if _return else None
 
+    def updateEmailVerified(self, id: str, email_verified: bool) -> Union[user_model.UserModel, None]:
+        _return = self.user_coll.find_one_and_update(
+            {"id": id},
+            {"$set": {"email_verified": email_verified}},
+            return_document=ReturnDocument.AFTER,
+        )
+
+        return user_model.UserModel(**_return) if _return else None
+
     def updateLastActive(self, id: str, last_active: int) -> Union[user_model.UserModel, None]:
         _return = self.user_coll.find_one_and_update(
             {"id": id},
