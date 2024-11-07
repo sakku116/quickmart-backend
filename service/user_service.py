@@ -1,6 +1,6 @@
 from fastapi import Depends
 from domain.model import user_model
-from repository import user_repo
+from repository import user_repo, refresh_token_repo, otp_repo
 from domain.dto import auth_dto
 from core.logging import logger
 from domain.rest import user_rest
@@ -11,8 +11,15 @@ from utils import helper
 
 
 class UserService:
-    def __init__(self, user_repo: user_repo.UserRepo = Depends()) -> None:
+    def __init__(
+        self,
+        user_repo: user_repo.UserRepo = Depends(),
+        refresh_token_repo: refresh_token_repo.RefreshTokenRepo = Depends(),
+        otp_repo: otp_repo.OtpRepo = Depends(),
+    ) -> None:
         self.user_repo = user_repo
+        self.otp_repo = otp_repo
+        self.refresh_token_repo = refresh_token_repo
 
     def getMe(self, current_user: auth_dto.CurrentUser) -> user_rest.GetMeRespData:
         return user_rest.GetMeRespData(**current_user.model_dump())
@@ -94,7 +101,9 @@ class UserService:
             user.birth_date = payload.birth_date
 
         # re-validate user
-        user.model_validate(user)  # dont need to raise exception because ValidationError automatically handled by exceptions handler
+        user.model_validate(
+            user
+        )  # dont need to raise exception because ValidationError automatically handled by exceptions handler
 
         # update user
         user.updated_at = helper.timeNowEpoch()
@@ -163,3 +172,19 @@ class UserService:
         self.user_repo.update(id=user.id, data=user)
 
         return user_rest.UpdatePasswordRespData(**user.model_dump())
+
+    def delete(self, user_id: str):
+        _params = {"user_id": user_id}
+
+        user = self.user_repo.delete(id=user_id)
+        if not user:
+            exc = CustomHttpException(
+                status_code=404, message="User not found", context=_params
+            )
+            logger.error(exc)
+            raise exc
+
+        self.refresh_token_repo.deleteManyByCreatedBy(created_by=user_id)
+        self.otp_repo.deleteManyByCreatedBy(created_by=user_id)
+
+        return

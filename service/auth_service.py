@@ -163,6 +163,10 @@ class AuthService:
         # update last_active
         time_now = helper.timeNowEpoch()
         user = self.user_repo.updateLastActive(id=claims.sub, last_active=time_now)
+        if not user:
+            exc = CustomHttpException(status_code=401, message="User not found")
+            logger.error(exc)
+            raise exc
 
         result = auth_dto.CurrentUser(**user.model_dump())
 

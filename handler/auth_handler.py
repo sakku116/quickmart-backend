@@ -12,7 +12,13 @@ AuthRouter = APIRouter(
 
 
 @AuthRouter.post(
-    "/register", response_model=auth_rest.RegisterResp[auth_rest.BaseTokenResp]
+    "/register",
+    response_model=auth_rest.RegisterResp[auth_rest.BaseTokenResp],
+    description="""
+you may ask 'why there are duplicate access_token and refresh_token fields?'\n
+well, fastapi oauth need `access_token` field in the root of the response,\n
+also my mobile client GUY need it inside of the `data` field.
+""",
 )
 def register(
     payload: auth_rest.RegisterReq = Depends(),
@@ -26,7 +32,15 @@ def register(
     return resp
 
 
-@AuthRouter.post("/login", response_model=auth_rest.LoginResp[auth_rest.BaseTokenResp])
+@AuthRouter.post(
+    "/login",
+    response_model=auth_rest.LoginResp[auth_rest.BaseTokenResp],
+    description="""
+you may ask 'why there are duplicate access_token and refresh_token fields?'\n
+well, fastapi oauth need `access_token` field in the root of the response,\n
+also my mobile client GUY need it inside of the `data` field
+""",
+)
 def login(
     payload: auth_rest.LoginReq = Depends(),
     auth_service: auth_service.AuthService = Depends(),
@@ -40,7 +54,13 @@ def login(
 
 
 @AuthRouter.post(
-    "/refresh-token", response_model=auth_rest.RefreshTokenResp[auth_rest.BaseTokenResp]
+    "/refresh-token",
+    response_model=auth_rest.RefreshTokenResp[auth_rest.BaseTokenResp],
+    description="""
+you may ask 'why there are duplicate access_token and refresh_token fields?'\n
+well, fastapi oauth need `access_token` field in the root of the response,\n
+also my mobile client GUY need it inside of the `data` field.
+""",
 )
 def refresh_token(
     payload: auth_rest.RefreshTokenReq = Depends(),
@@ -65,9 +85,7 @@ def check_token(
     return generic_resp.RespData[auth_rest.CheckTokenRespData](data=resp)
 
 
-@AuthRouter.post(
-    "/verify-email/send-otp", response_model=generic_resp.RespData
-)
+@AuthRouter.post("/verify-email/send-otp", response_model=generic_resp.RespData)
 def verify_email_send_otp(
     current_user: auth_dto.CurrentUser = Depends(verifyToken),
     auth_service: auth_service.AuthService = Depends(),
@@ -75,9 +93,8 @@ def verify_email_send_otp(
     auth_service.sendVerifyEmailOTP(current_user=current_user)
     return generic_resp.RespData()
 
-@AuthRouter.post(
-    "/verify-email/verify-otp", response_model=generic_resp.RespData
-)
+
+@AuthRouter.post("/verify-email/verify-otp", response_model=generic_resp.RespData)
 def verify_email_verify_otp(
     current_user: auth_dto.CurrentUser = Depends(verifyToken),
     payload: auth_rest.VerifyEmailOTPReq = Depends(),

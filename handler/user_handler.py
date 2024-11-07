@@ -56,3 +56,13 @@ def update_my_password(
 ):
     data = service.updatePassword(user_id=current_user.id, payload=payload)
     return generic_resp.RespData[user_rest.UpdatePasswordRespData](data=data)
+
+@UserRouter.delete(
+    "/me", response_model=generic_resp.RespData
+)
+def delete_my_profile(
+    service: user_service.UserService = Depends(),
+    current_user: auth_dto.CurrentUser = Depends(verifyToken),
+):
+    service.delete(user_id=current_user.id)
+    return generic_resp.RespData()

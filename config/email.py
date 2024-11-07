@@ -17,14 +17,16 @@ class EmailClient:
         cls.port = port
         cls.username = username
         cls.password = password
+        cls.smtp_connection = smtplib.SMTP(cls.smtp_server, cls.port)
 
         cls.connect()
 
     @classmethod
     def connect(cls):
         logger.debug(f"Connecting to {cls.smtp_server}:{cls.port}")
-        cls.smtp_connection = smtplib.SMTP(cls.smtp_server, cls.port)
+        cls.smtp_connection.connect(cls.smtp_server, cls.port)
         cls.smtp_connection.starttls()
+        cls.smtp_connection.ehlo()
 
         logger.debug(
             f"login to {cls.username}:{'*' * len(cls.password)}({len(cls.password)})"
@@ -45,9 +47,13 @@ class EmailClient:
         msg.set_content(body)
 
         try:
-            if not cls.smtp_connection:
-                cls.connect()
             cls.smtp_connection.send_message(msg)
+        except smtplib.SMTPServerDisconnected as e:
+            logger.error(
+                f"Error sending email: {e}; Reconnecting then resending email"
+            )
+            cls.reconnect()
+            cls.send_email(subject, body, recipient)
         except (smtplib.SMTPException, smtplib.SMTPServerDisconnected) as e:
             logger.error(
                 f"Error sending email: {e}; Reconnecting before raising exception"
@@ -60,9 +66,10 @@ class EmailClient:
     @classmethod
     def close(cls):
         if cls.smtp_connection:
-            cls.smtp_connection.quit()
-            cls.smtp_connection = None
-
+            try:
+                cls.smtp_connection.quit()
+            except Exception as e:
+                logger.warning(e)
 
 class GmailEmailClient(EmailClient):
     @classmethod
