@@ -1,12 +1,11 @@
 from datetime import datetime, timedelta
+from typing import Callable
 
+import jwt
 from fastapi import Depends
-from jwt import exceptions as jwt_exceptions
-
 from config.env import Env
 from core.exceptions.http import CustomHttpException
 from core.logging import logger
-import jwt
 from domain.dto import auth_dto
 from domain.model import refresh_token_model, user_model
 from domain.rest import auth_rest
@@ -14,6 +13,7 @@ from repository import refresh_token_repo, user_repo
 from utils import bcrypt as bcrypt_utils
 from utils import helper
 from utils import jwt as jwt_utils
+from utils.service import email_util
 
 
 class AuthService:
@@ -21,9 +21,11 @@ class AuthService:
         self,
         user_repo: user_repo.UserRepo = Depends(),
         refresh_token_repo: refresh_token_repo.RefreshTokenRepo = Depends(),
+        email_util: email_util.GmailEmailClient = Depends(),
     ):
         self.user_repo = user_repo
         self.refresh_token_repo = refresh_token_repo
+        self.email_util = email_util
 
     def login(self, payload: auth_rest.LoginReq) -> auth_rest.LoginResp:
         # check if input is email
@@ -265,3 +267,5 @@ class AuthService:
             refresh_token=new_refresh_token.id,
         )
         return result
+
+    # def verifyEmail(self, payload.)

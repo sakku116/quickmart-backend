@@ -1,14 +1,13 @@
 from fastapi import Depends
-from config.mongodb import getMongoDB
+from config.mongodb import MongodbClient
 from domain.model import refresh_token_model
-from pymongo.database import Database
 from pymongo import ReturnDocument
 from typing import Union
 
 
 class RefreshTokenRepo:
-    def __init__(self, mongo_db: Database = Depends(getMongoDB)):
-        self.user_coll = mongo_db[refresh_token_model.RefreshTokenModel()._coll_name]
+    def __init__(self, mongo_db: MongodbClient = Depends()):
+        self.user_coll = mongo_db.db[refresh_token_model.RefreshTokenModel()._coll_name]
 
     def create(self, data: refresh_token_model.RefreshTokenModel):
         return self.user_coll.insert_one(data.model_dump())

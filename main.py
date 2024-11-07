@@ -5,6 +5,8 @@ load_dotenv(find_dotenv(), override=True)
 import logging
 import sys
 from contextlib import asynccontextmanager
+from config.email import GmailEmailClient
+from config.mongodb import MongodbClient
 from dataclasses import asdict
 from datetime import datetime
 
@@ -59,7 +61,16 @@ LOGGING_CONFIG["formatters"]["access"]["datefmt"] = "%d-%m-%Y %H:%M:%S"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # prepare here
+    GmailEmailClient.init()
+    MongodbClient.init()
+
+
     yield
+
+
+    # cleanup here
+    GmailEmailClient.close()
+    MongodbClient.close()
 
 
 app = FastAPI(
@@ -110,9 +121,9 @@ if __name__ == "__main__":
         if key not in dotenv_values:
             logger.warning(f"{key} is missing from .env file")
 
-    user_repo_ = None
-
     # process command line argumants (if any)
+    mongodb_ = getMongoDB()
+    user_repo_ = user_repo.UserRepo(mongo_db=mongodb_)
     args = sys.argv
     if len(args) > 1:
         supported_args = ["--ensure-indexes", "--seed-initial-users"]
@@ -123,12 +134,12 @@ if __name__ == "__main__":
 
         for arg in args[1:]:
             if arg == "--seed-initial-users":
-                if not user_repo_:
-                    user_repo_ = user_repo.UserRepo(mongo_db=getMongoDB())
                 seeder_utils.seedInitialUsers(user_repo=user_repo_)
 
             elif arg == "--ensure-indexes":
-                mongodb_utils.ensureIndexes(db=getMongoDB())
+                mongodb_utils.ensureIndexes(db=mongodb_)
+
+    mongodb_.client.close()
 
     uvicorn.run(
         "main:app",

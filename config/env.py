@@ -24,3 +24,5 @@ class Env:
 
     MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
     MONGODB_NAME: str = os.getenv("MONGODB_NAME", "quickmart")
+    GMAIL_SENDER_EMAIL: str = os.getenv("GMAIL_SENDER_EMAIL", "")
+    GMAIL_SENDER_PASSWORD: str = os.getenv("GMAIL_SENDER_PASSWORD", "")
