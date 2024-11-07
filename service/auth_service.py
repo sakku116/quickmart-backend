@@ -27,13 +27,13 @@ class AuthService:
 
     def login(self, payload: auth_rest.LoginReq) -> auth_rest.LoginResp:
         # check if input is email
-        is_email = "@" in payload.email_or_username
+        is_email = "@" in payload.username
 
         # check user if exist by email or username
         if is_email:
-            user = self.user_repo.getByEmail(email=payload.email_or_username)
+            user = self.user_repo.getByEmail(email=payload.username)
         else:
-            user = self.user_repo.getByUsername(username=payload.email_or_username)
+            user = self.user_repo.getByUsername(username=payload.username)
 
         if not user:
             exc = CustomHttpException(status_code=401, message="User not found")
@@ -135,13 +135,6 @@ class AuthService:
         )
 
     def verifyToken(self, token: str) -> auth_dto.CurrentUser:
-        if "Bearer" not in token:
-            exc = CustomHttpException(status_code=401, message="Invalid token")
-            logger.error(exc)
-            raise exc
-
-        token = token.removeprefix("Bearer ")
-
         # decode token
         claims = None
         try:
@@ -172,7 +165,7 @@ class AuthService:
         return result
 
     def checkToken(self, payload: auth_rest.CheckTokenReq) -> auth_rest.CheckTokenRespData:
-        data = self.verifyToken(token=f"Bearer {payload.access_token}")
+        data = self.verifyToken(token=payload.access_token.removeprefix("Bearer "))
         return auth_rest.CheckTokenRespData(**data.model_dump())
 
     def register(self, payload: auth_rest.RegisterReq) -> auth_rest.RegisterResp:

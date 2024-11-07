@@ -22,7 +22,7 @@ from core import middlewares
 from core.exceptions import handlers as exception_handlers
 from core.exceptions.http import CustomHttpException
 from core.logging import logger, setupLogger
-from handler import auth_handler
+from handler import auth_handler, user_handler
 from repository import user_repo
 from utils import seeder as seeder_utils, mongodb as mongodb_utils
 
@@ -95,6 +95,7 @@ app.add_middleware(
 
 # register handlers
 app.include_router(auth_handler.AuthRouter)
+app.include_router(user_handler.UserRouter)
 
 if __name__ == "__main__":
     # checking unused env ferm .env file

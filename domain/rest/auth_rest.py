@@ -21,7 +21,7 @@ class BaseTokenResp(BaseModel):
 
 @dataclass
 class LoginReq:
-    email_or_username: str = Form()
+    username: str = Form()
     password: str = Form()
 
 
