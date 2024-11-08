@@ -20,6 +20,8 @@ class UpdateProfileReq:
     phone_number: Optional[str] = Form(None)
     gender: Optional[str] = Form(None)
     birth_date: Optional[str] = Form(None, description="format: DD-MM-YYYY")
+    language: Optional[str] = Form(None)
+    currency: Optional[str] = Form(None)
 
 class UpdateProfileRespData(user_model.PublicUserModel):
     pass

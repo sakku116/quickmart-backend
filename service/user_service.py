@@ -80,6 +80,24 @@ class UserService:
                 logger.error(exc)
                 raise exc
 
+        # validate language
+        if payload.language != None:
+            if not helper.isLanguageCodeValid(payload.language):
+                exc = CustomHttpException(
+                    status_code=400, message="Invalid language code"
+                )
+                logger.error(exc)
+                raise
+
+        # validate currency
+        if payload.currency != None:
+            if not helper.isCurrencyCodeValid(payload.currency):
+                exc = CustomHttpException(
+                    status_code=400, message="Invalid currency code"
+                )
+                logger.error(exc)
+                raise
+
         # update fields
         if payload.fullname != None:
             user.fullname = payload.fullname
@@ -100,10 +118,16 @@ class UserService:
         if payload.birth_date != None:
             user.birth_date = payload.birth_date
 
+        if payload.language != None:
+            user.language = payload.language
+
+        if payload.currency != None:
+            user.currency = payload.currency
+
         # re-validate user
         user.model_validate(
             user
-        )  # dont need to raise exception because ValidationError automatically handled by exceptions handler
+        )
 
         # update user
         user.updated_at = helper.timeNowEpoch()
