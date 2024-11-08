@@ -22,6 +22,8 @@ class Env:
     INITIAL_CUSTOMER_USER_PASSWORD: str = os.getenv("INITIAL_CUSTOMER_USER_PASSWORD", "")
     INITIAL_SELLER_USER_USERNAME: str = os.getenv("INITIAL_SELLER_USER_USERNAME", "")
     INITIAL_SELLER_USER_PASSWORD: str = os.getenv("INITIAL_SELLER_USER_PASSWORD", "")
+    INITIAL_ADMIN_USER_USERNAME: str = os.getenv("INITIAL_ADMIN_USER_USERNAME", "")
+    INITIAL_ADMIN_USER_PASSWORD: str = os.getenv("INITIAL_ADMIN_USER_PASSWORD", "")
 
     MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
     MONGODB_NAME: str = os.getenv("MONGODB_NAME", "quickmart")
