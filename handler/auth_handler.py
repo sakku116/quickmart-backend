@@ -85,6 +85,44 @@ def check_token(
     return generic_resp.RespData[auth_rest.CheckTokenRespData](data=resp)
 
 
+@AuthRouter.post("/forgot-password/send-otp", response_model=generic_resp.RespData)
+async def forgot_password_send_otp(
+    payload: auth_rest.SendEmailForgotPasswordOTPReq = Depends(),
+    auth_service: auth_service.AuthService = Depends(),
+):
+    await auth_service.sendEmailForgotPasswordOTP(payload=payload)
+    resp = generic_resp.RespData()
+    resp.meta.message = "6-digit verification code has been sent to your email address."
+    return resp
+
+
+@AuthRouter.post(
+    "/forgot-password/verify-otp",
+    response_model=generic_resp.RespData[auth_rest.VerifyForgotPasswordOTPRespData],
+)
+def forgot_password_verify_otp(
+    payload: auth_rest.VerifyForgotPasswordOTPReq = Depends(),
+    auth_service: auth_service.AuthService = Depends(),
+):
+    data = auth_service.verifyForgotPasswordOTP(payload=payload)
+    resp = generic_resp.RespData[auth_rest.VerifyForgotPasswordOTPRespData](data=data)
+    resp.meta.message = "OTP verified successfully"
+    return resp
+
+
+@AuthRouter.post(
+    "/forgot-password/change-password", response_model=generic_resp.RespData
+)
+def change_forgotten_password(
+    payload: auth_rest.ChangeForgottenPasswordReq = Depends(),
+    auth_service: auth_service.AuthService = Depends(),
+):
+    auth_service.changeForgottenPassword(payload=payload)
+    resp = generic_resp.RespData()
+    resp.meta.message = "Password changed successfully"
+    return resp
+
+
 @AuthRouter.post("/verify-email/send-otp", response_model=generic_resp.RespData)
 async def verify_email_send_otp(
     current_user: auth_dto.CurrentUser = Depends(verifyToken),

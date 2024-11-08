@@ -62,3 +62,21 @@ class CheckTokenRespData(auth_dto.CurrentUser):
 @dataclass
 class VerifyEmailOTPReq:
     otp_code: str = Form()
+
+@dataclass
+class SendEmailForgotPasswordOTPReq:
+    email: str = Form()
+
+@dataclass
+class VerifyForgotPasswordOTPReq:
+    email: str = Form()
+    otp_code: str = Form()
+
+class VerifyForgotPasswordOTPRespData(BaseModel):
+    otp_id: str = ""
+
+@dataclass
+class ChangeForgottenPasswordReq:
+    otp_id: str = Form()
+    new_password: str = Form()
+    confirm_password: str = Form()

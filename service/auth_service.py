@@ -14,6 +14,7 @@ from utils import bcrypt as bcrypt_utils
 from utils import helper
 from utils import jwt as jwt_utils
 from utils.service import email_util
+from dataclasses import asdict
 
 
 class AuthService:
@@ -282,7 +283,7 @@ class AuthService:
             raise exc
 
         # check if any active otp exist
-        otp = self.otp_repo.getLatestByCreatedBy(created_by=current_user.id)
+        otp = self.otp_repo.getUnverifiedByCreatedBy(created_by=current_user.id)
         if otp:
             # delete
             self.otp_repo.delete(id=otp.id)
@@ -365,3 +366,127 @@ class AuthService:
         user.email_verified = True
         user.updated_at = helper.timeNowEpoch()
         self.user_repo.update(id=user.id, data=user)
+
+    async def sendEmailForgotPasswordOTP(self, payload: auth_rest.SendEmailForgotPasswordOTPReq):
+        # check if email is registered
+        user = self.user_repo.getByEmail(email=payload.email)
+        if not user:
+            exc = CustomHttpException(status_code=400, message="Email not registered")
+            logger.error(exc)
+            raise exc
+
+        # check if any unverified otp exist
+        otp = self.otp_repo.getUnverifiedByCreatedBy(created_by=user.id)
+        if otp:
+            # delete
+            self.otp_repo.delete(id=otp.id)
+
+        # create new otp
+        time_now = helper.timeNowEpoch()
+        new_otp = otp_model.OtpModel(
+            id=helper.generateUUID4(),
+            created_at=time_now,
+            created_by=user.id,
+            code=helper.generateRandomNumber(length=6),
+        )
+
+        self.otp_repo.create(data=new_otp)
+
+        # send email
+        try:
+            await self.email_util.send_email(
+                subject="Quickmart New Password Verification",
+                body=f"Your OTP is {new_otp.code}",
+                recipient=payload.email,
+            )
+        except Exception as e:
+            exc = CustomHttpException(
+                status_code=500, message="Failed to send email", detail=str(e)
+            )
+            logger.error(exc)
+            raise exc
+
+    def verifyForgotPasswordOTP(self, payload: auth_rest.VerifyForgotPasswordOTPReq) -> auth_rest.VerifyForgotPasswordOTPRespData:
+        _params = {**asdict(payload)}
+        # get users by email
+        user = self.user_repo.getByEmail(email=payload.email)
+        if not user:
+            exc = CustomHttpException(status_code=400, message="Email not found")
+            logger.error(exc)
+
+        # get latest by created by
+        otp = self.otp_repo.getLatestByCreatedBy(created_by=user.id)
+        if not otp:
+            exc = CustomHttpException(
+                status_code=400, message="OTP not found", context=_params
+            )
+            logger.error(exc)
+            raise exc
+
+        # check if otp is expired
+        if helper.isExpired(otp.created_at, expr_seconds=Env.OTP_EXPIRES_SECONDS):
+            exc = CustomHttpException(
+                status_code=400, message="OTP expired", context=_params
+            )
+            logger.error(exc)
+            raise exc
+
+        # check if otp is valid
+        if payload.otp_code != otp.code:
+            exc = CustomHttpException(
+                status_code=400, message="Invalid OTP", context=_params
+            )
+            logger.error(exc)
+            raise exc
+
+        # mark as verified
+        otp.verified = True
+        otp.updated_at = helper.timeNowEpoch()
+        self.otp_repo.update(id=otp.id, data=otp)
+
+        return auth_rest.VerifyForgotPasswordOTPRespData(otp_id=otp.id)
+
+    def changeForgottenPassword(self, payload: auth_rest.ChangeForgottenPasswordReq):
+        otp = self.otp_repo.getById(id=payload.otp_id)
+        if not otp:
+            exc = CustomHttpException(status_code=400, message="OTP not found")
+            logger.error(exc)
+            raise exc
+
+        # check if otp is expired
+        if helper.isExpired(otp.created_at, expr_seconds=Env.OTP_EXPIRES_SECONDS):
+            exc = CustomHttpException(status_code=400, message="OTP expired")
+            logger.error(exc)
+            raise exc
+
+        # check if otp is verified
+        if not otp.verified:
+            exc = CustomHttpException(status_code=400, message="OTP not verified, verify first")
+            logger.error(exc)
+
+        user = self.user_repo.getById(id=otp.created_by)
+        if not user:
+            exc = CustomHttpException(status_code=400, message="User not found")
+            logger.error(exc)
+            raise exc
+
+        # validate password
+        if not helper.validatePassword(payload.new_password):
+            exc = CustomHttpException(status_code=400, message="Invalid password")
+            logger.error(exc)
+            raise exc
+
+        if payload.new_password != payload.confirm_password:
+            exc = CustomHttpException(status_code=400, message="Password confirmation does not match")
+            logger.error(exc)
+            raise exc
+
+        # update password
+        user.password = bcrypt_utils.hashPassword(payload.new_password)
+        user.updated_by = user.id
+        user.updated_at = helper.timeNowEpoch()
+        user = self.user_repo.update(id=user.id, data=user)
+        if not user:
+            exc = CustomHttpException(status_code=500, message="Failed to update password, user not found")
+            logger.error(exc)
+            raise exc
