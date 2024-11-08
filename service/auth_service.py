@@ -1,20 +1,21 @@
+from dataclasses import asdict
 from datetime import datetime, timedelta
 from typing import Callable, Literal
 
 import jwt
 from fastapi import Depends
+
 from config.env import Env
 from core.exceptions.http import CustomHttpException
 from core.logging import logger
 from domain.dto import auth_dto
-from domain.model import refresh_token_model, user_model, otp_model
+from domain.model import otp_model, refresh_token_model, user_model
 from domain.rest import auth_rest
-from repository import refresh_token_repo, user_repo, otp_repo
+from repository import otp_repo, refresh_token_repo, user_repo
 from utils import bcrypt as bcrypt_utils
 from utils import helper
 from utils import jwt as jwt_utils
 from utils.service import email_util
-from dataclasses import asdict
 
 
 class AuthService:
