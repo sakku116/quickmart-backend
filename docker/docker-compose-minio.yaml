@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  minio:
+    image: minio/minio
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./data:/data
+    environment:
+      MINIO_ACCESS_KEY:
+      MINIO_SECRET_KEY:
+      MINIO_ROOT_USER:
+      MINIO_ROOT_PASSWORD:
