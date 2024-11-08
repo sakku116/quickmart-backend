@@ -3,6 +3,7 @@ from pydantic import field_validator, ValidationError
 from typing import Literal, Optional
 from datetime import datetime
 from pydantic import BaseModel
+from utils import helper
 
 USER_GENDER_ENUMS = Literal["male", "female"]
 USER_GENDER_ENUMS_DEFAULT = "male"
@@ -17,9 +18,18 @@ class PublicUserModel(BaseModel):
     phone_number: str = ""
     gender: Literal[USER_GENDER_ENUMS] = "male"
     birth_date: Optional[str] = None # DD-MM-YYYY
-    profile_picture: str = "" # fileanme
+    profile_picture: str = "" # filename
+    language: str = "en"
+    currency: str = "USD"
 
     last_active: int = 0
+
+    @field_validator("username", mode="before")
+    def username_validator(cls, v):
+        if " " in v:
+            raise ValidationError("username is not valid")
+
+        return v
 
     @field_validator("birth_date", mode="before")
     def birth_date_validator(cls, v):
@@ -31,6 +41,35 @@ class PublicUserModel(BaseModel):
             return v
         except Exception as e:
             raise ValidationError("birth_date is not valid")
+
+    @field_validator("email", mode="before")
+    def email_validator(cls, v):
+        if "@" not in v or " " in v:
+            raise ValidationError("email is not valid")
+
+        return v
+
+    @field_validator("language", mode="before")
+    def language_validator(cls, v):
+        if not v:
+            return "en"
+        else:
+            valid = helper.isLanguageCodeValid(v)
+            if not valid:
+                raise ValidationError("language is not valid")
+
+        return v
+
+    @field_validator("currency", mode="before")
+    def currency_validator(cls, v):
+        if not v:
+            return "USD"
+        else:
+            valid = helper.isCurrencyCodeValid(v)
+            if not valid:
+                raise ValidationError("currency is not valid")
+
+        return v
 
 class UserModel(MyBaseModel, PublicUserModel):
     _coll_name = "users"
