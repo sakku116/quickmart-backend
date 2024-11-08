@@ -7,10 +7,12 @@ from utils import helper
 
 USER_GENDER_ENUMS = Literal["male", "female"]
 USER_GENDER_ENUMS_DEFAULT = "male"
+USER_ROLE_ENUMS = Literal["seller", "customer", "admin"]
+USER_ROLE_ENUMS_DEFAULT = "customer"
 
 class PublicUserModel(BaseModel):
     id: str
-    role: Literal["seller", "customer"] = "customer"
+    role: Literal[USER_ROLE_ENUMS] = USER_GENDER_ENUMS_DEFAULT
     fullname: str = ""
     username: str = ""
     email: str = ""

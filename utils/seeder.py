@@ -35,6 +35,19 @@ def seedInitialUsers(user_repo: user_repo.UserRepo):
             )
         )
 
+    if Env.INITIAL_ADMIN_USER_USERNAME and Env.INITIAL_ADMIN_USER_PASSWORD:
+        users.append(
+            user_model.UserModel(
+                id=helper.generateUUID4(),
+                created_at=time_now,
+                fullname=Env.INITIAL_ADMIN_USER_USERNAME.title().replace("_", " "),
+                username=Env.INITIAL_ADMIN_USER_USERNAME,
+                email=f"{Env.INITIAL_ADMIN_USER_USERNAME}@gmail.com",
+                password=bcrypt_utils.hashPassword(Env.INITIAL_ADMIN_USER_PASSWORD),
+                role="admin",
+            )
+        )
+
     for user in users:
         logger.info(f"Seeding initial user: {user.username}")
         existing = user_repo.getByUsername(user.username) or user_repo.getByEmail(user.email) or None
