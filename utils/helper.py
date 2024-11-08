@@ -3,6 +3,8 @@ import json
 from uuid import uuid4
 from datetime import datetime
 import random
+from babel import Locale
+from babel.numbers import get_currency_symbol
 
 
 def parseBool(source: any) -> bool:
@@ -46,3 +48,26 @@ def isExpired(created_at: int, expr_hours: int = None, expr_seconds: int = None)
     elif expr_seconds:
         expiration_time = created_at + expr_seconds
     return current_time > expiration_time
+
+def validatePassword(password: str, length: int = 7) -> bool:
+    if len(password) < length:
+        return False
+
+    if " " in password:
+        return False
+
+    return True
+
+def isLanguageCodeValid(language_code: str) -> bool:
+    try:
+        Locale.parse(language_code)
+        return True
+    except Exception as e:
+        return False
+
+def isCurrencyCodeValid(currency_code: str) -> bool:
+    try:
+        get_currency_symbol(currency_code)
+        return True
+    except Exception as e:
+        return False
