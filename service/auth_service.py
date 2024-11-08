@@ -413,6 +413,7 @@ class AuthService:
         if not user:
             exc = CustomHttpException(status_code=400, message="Email not found")
             logger.error(exc)
+            raise exc
 
         # get latest by created by
         otp = self.otp_repo.getLatestByCreatedBy(created_by=user.id)
