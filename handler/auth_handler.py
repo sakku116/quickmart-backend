@@ -86,11 +86,11 @@ def check_token(
 
 
 @AuthRouter.post("/verify-email/send-otp", response_model=generic_resp.RespData)
-def verify_email_send_otp(
+async def verify_email_send_otp(
     current_user: auth_dto.CurrentUser = Depends(verifyToken),
     auth_service: auth_service.AuthService = Depends(),
 ):
-    auth_service.sendVerifyEmailOTP(current_user=current_user)
+    await auth_service.sendVerifyEmailOTP(current_user=current_user)
     return generic_resp.RespData()
 
 

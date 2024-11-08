@@ -61,7 +61,7 @@ LOGGING_CONFIG["formatters"]["access"]["datefmt"] = "%d-%m-%Y %H:%M:%S"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # prepare here
-    GmailEmailClient.init()
+    # GmailEmailClient.init()
     MongodbClient.init()
 
 
@@ -69,7 +69,7 @@ async def lifespan(app: FastAPI):
 
 
     # cleanup here
-    GmailEmailClient.close()
+    # GmailEmailClient.close()
     MongodbClient.close()
 
 

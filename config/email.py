@@ -2,7 +2,23 @@ import smtplib
 from email.message import EmailMessage
 from core.logging import logger
 from config.env import Env
+from fastapi_mail import ConnectionConfig, FastMail
 
+def getFastMailClient_gmail():
+    return FastMail(
+        config=ConnectionConfig(
+            MAIL_USERNAME=Env.GMAIL_SENDER_EMAIL,
+            MAIL_PASSWORD=Env.GMAIL_SENDER_PASSWORD,
+            MAIL_FROM=Env.GMAIL_SENDER_EMAIL,
+            MAIL_PORT=587,
+            MAIL_SERVER="smtp.gmail.com",
+            MAIL_FROM_NAME="Quickmart",
+            MAIL_STARTTLS=True,
+            MAIL_SSL_TLS=False,
+            USE_CREDENTIALS=True,
+            VALIDATE_CERTS=False
+        )
+    )
 
 class EmailClient:
     smtp_connection: smtplib.SMTP = None
@@ -25,13 +41,23 @@ class EmailClient:
     def connect(cls):
         logger.debug(f"Connecting to {cls.smtp_server}:{cls.port}")
         cls.smtp_connection.connect(cls.smtp_server, cls.port)
-        cls.smtp_connection.starttls()
-        cls.smtp_connection.ehlo()
+        try:
+            cls.smtp_connection.starttls()
+        except Exception as e:
+            logger.warning(f"failed to start tls: {e}")
+
+        try:
+            cls.smtp_connection.ehlo()
+        except Exception as e:
+            logger.warning(f"failed to ehlo: {e}")
 
         logger.debug(
             f"login to {cls.username}:{'*' * len(cls.password)}({len(cls.password)})"
         )
-        cls.smtp_connection.login(cls.username, cls.password)
+        try:
+            cls.smtp_connection.login(cls.username, cls.password)
+        except Exception as e:
+            logger.warning(f"failed to login: {e}")
 
     @classmethod
     def reconnect(cls):
@@ -52,13 +78,13 @@ class EmailClient:
             logger.error(
                 f"Error sending email: {e}; Reconnecting then resending email"
             )
-            cls.reconnect()
+            cls.connect()
             cls.send_email(subject, body, recipient)
         except (smtplib.SMTPException, smtplib.SMTPServerDisconnected) as e:
             logger.error(
                 f"Error sending email: {e}; Reconnecting before raising exception"
             )
-            cls.reconnect()
+            cls.connect()
             raise e
 
         logger.debug(f"Email sent successfully to {recipient}!")

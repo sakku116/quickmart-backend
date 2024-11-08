@@ -274,7 +274,7 @@ class AuthService:
         )
         return result
 
-    def sendVerifyEmailOTP(self, current_user: auth_dto.CurrentUser):
+    async def sendVerifyEmailOTP(self, current_user: auth_dto.CurrentUser):
         # check if email already verified
         if current_user.email_verified:
             exc = CustomHttpException(status_code=400, message="Email already verified")
@@ -309,7 +309,7 @@ class AuthService:
 
         # send email
         try:
-            self.email_util.send_email(
+            await self.email_util.send_email(
                 subject="Quickmart Email Verification",
                 body=f"Your OTP is {new_otp.code}",
                 recipient=current_user.email,
