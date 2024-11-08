@@ -1,5 +1,6 @@
 from dataclasses import asdict
 from datetime import datetime, timedelta
+from pydantic import ValidationError
 from typing import Callable, Literal
 
 import jwt
@@ -182,7 +183,7 @@ class AuthService:
 
     def register(self, payload: auth_rest.RegisterReq) -> auth_rest.RegisterResp:
         # validate password
-        if len(payload.password) < 7:
+        if len(payload.password) < 6:
             exc = CustomHttpException(
                 status_code=400, message="Password must be at least 7 characters long"
             )
@@ -192,20 +193,6 @@ class AuthService:
         if " " in payload.password:
             exc = CustomHttpException(
                 status_code=400, message="Password must not contain spaces"
-            )
-            logger.error(exc)
-            raise exc
-
-        # validate email
-        if "@" not in payload.email:
-            exc = CustomHttpException(status_code=400, message="Invalid email address")
-            logger.error(exc)
-            raise exc
-
-        # validate username
-        if " " in payload.username:
-            exc = CustomHttpException(
-                status_code=400, message="Username must not contain spaces"
             )
             logger.error(exc)
             raise exc
@@ -235,15 +222,26 @@ class AuthService:
 
         # create user
         time_now = helper.timeNowEpoch()
-        new_user = user_model.UserModel(
-            id=helper.generateUUID4(),
-            created_at=time_now,
-            fullname=payload.fullname,
-            username=payload.username,
-            email=payload.email,
-            password=hashed_pw,
-            role="customer",
-        )
+        try:
+            new_user = user_model.UserModel(
+                id=helper.generateUUID4(),
+                created_at=time_now,
+                fullname=payload.fullname,
+                username=payload.username,
+                email=payload.email,
+                password=hashed_pw,
+                role="customer",
+            )
+        except ValidationError as e:
+            for error in e.errors():
+                exc = CustomHttpException(
+                    status_code=400,
+                    message=error.get("msg") or "Invalid value",
+                    detail=e.json(),
+                )
+                logger.error(exc)
+                raise exc
+
         self.user_repo.create(data=new_user)
 
         # generate jwt token
@@ -368,7 +366,9 @@ class AuthService:
         user.updated_at = helper.timeNowEpoch()
         self.user_repo.update(id=user.id, data=user)
 
-    async def sendEmailForgotPasswordOTP(self, payload: auth_rest.SendEmailForgotPasswordOTPReq):
+    async def sendEmailForgotPasswordOTP(
+        self, payload: auth_rest.SendEmailForgotPasswordOTPReq
+    ):
         # check if email is registered
         user = self.user_repo.getByEmail(email=payload.email)
         if not user:
@@ -407,7 +407,9 @@ class AuthService:
             logger.error(exc)
             raise exc
 
-    def verifyForgotPasswordOTP(self, payload: auth_rest.VerifyForgotPasswordOTPReq) -> auth_rest.VerifyForgotPasswordOTPRespData:
+    def verifyForgotPasswordOTP(
+        self, payload: auth_rest.VerifyForgotPasswordOTPReq
+    ) -> auth_rest.VerifyForgotPasswordOTPRespData:
         _params = {**asdict(payload)}
         # get users by email
         user = self.user_repo.getByEmail(email=payload.email)
@@ -463,7 +465,9 @@ class AuthService:
 
         # check if otp is verified
         if not otp.verified:
-            exc = CustomHttpException(status_code=400, message="OTP not verified, verify first")
+            exc = CustomHttpException(
+                status_code=400, message="OTP not verified, verify first"
+            )
             logger.error(exc)
 
         user = self.user_repo.getById(id=otp.created_by)
@@ -473,13 +477,24 @@ class AuthService:
             raise exc
 
         # validate password
-        if not helper.validatePassword(payload.new_password):
-            exc = CustomHttpException(status_code=400, message="Invalid password")
+        if len(payload.new_password) < 6:
+            exc = CustomHttpException(
+                status_code=400, message="Password must be at least 6 characters long"
+            )
+            logger.error(exc)
+            raise exc
+
+        if " " in payload.new_password:
+            exc = CustomHttpException(
+                status_code=400, message="Password must not contain spaces"
+            )
             logger.error(exc)
             raise exc
 
         if payload.new_password != payload.confirm_password:
-            exc = CustomHttpException(status_code=400, message="Password confirmation does not match")
+            exc = CustomHttpException(
+                status_code=400, message="Password confirmation does not match"
+            )
             logger.error(exc)
             raise exc
 
@@ -489,6 +504,8 @@ class AuthService:
         user.updated_at = helper.timeNowEpoch()
         user = self.user_repo.update(id=user.id, data=user)
         if not user:
-            exc = CustomHttpException(status_code=500, message="Failed to update password, user not found")
+            exc = CustomHttpException(
+                status_code=500, message="Failed to update password, user not found"
+            )
             logger.error(exc)
             raise exc

@@ -49,7 +49,7 @@ def isExpired(created_at: int, expr_hours: int = None, expr_seconds: int = None)
         expiration_time = created_at + expr_seconds
     return current_time > expiration_time
 
-def validatePassword(password: str, length: int = 7) -> bool:
+def isPasswordValid(password: str, length: int = 6) -> bool:
     if len(password) < length:
         return False
 

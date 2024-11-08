@@ -1,12 +1,12 @@
 from fastapi import Depends
 from domain.model import user_model
+from pydantic import ValidationError
 from repository import user_repo, refresh_token_repo, otp_repo
 from domain.dto import auth_dto
 from core.logging import logger
 from domain.rest import user_rest
 from core.exceptions.http import CustomHttpException
 from utils import bcrypt as bcrypt_utils
-from datetime import datetime
 from utils import helper
 
 
@@ -33,70 +33,6 @@ class UserService:
             exc = CustomHttpException(status_code=404, message="User not found")
             logger.error(exc)
             raise exc
-
-        # validate username
-        if payload.username != None:
-            _user = self.user_repo.getByUsername(username=payload.username)
-            if _user and _user.id != user.id:
-                exc = CustomHttpException(
-                    status_code=400, message="Username is already taken"
-                )
-                logger.error(exc)
-                raise exc
-
-            if " " in payload.username:
-                exc = CustomHttpException(
-                    status_code=400, message="Username must not contain spaces"
-                )
-                logger.error(exc)
-                raise exc
-
-        # validate email
-        if payload.email != None:
-            _user = self.user_repo.getByEmail(email=payload.email)
-            if _user and _user.id != user.id:
-                exc = CustomHttpException(
-                    status_code=400, message="Email is already taken"
-                )
-                logger.error(exc)
-                raise exc
-
-            if "@" not in payload.email:
-                exc = CustomHttpException(
-                    status_code=400, message="Invalid email address"
-                )
-                logger.error(exc)
-                raise exc
-
-        # validate birth_date
-        if payload.birth_date != None:
-            try:
-                datetime.strptime(payload.birth_date, "%d-%m-%Y")
-            except Exception as e:
-                exc = CustomHttpException(
-                    status_code=400,
-                    message="Invalid birth date, format should be DD-MM-YYYY",
-                )
-                logger.error(exc)
-                raise exc
-
-        # validate language
-        if payload.language != None:
-            if not helper.isLanguageCodeValid(payload.language):
-                exc = CustomHttpException(
-                    status_code=400, message="Invalid language code"
-                )
-                logger.error(exc)
-                raise
-
-        # validate currency
-        if payload.currency != None:
-            if not helper.isCurrencyCodeValid(payload.currency):
-                exc = CustomHttpException(
-                    status_code=400, message="Invalid currency code"
-                )
-                logger.error(exc)
-                raise
 
         # update fields
         if payload.fullname != None:
@@ -125,9 +61,19 @@ class UserService:
             user.currency = payload.currency
 
         # re-validate user
-        user.model_validate(
-            user
-        )
+        try:
+            user.model_validate(
+                user
+            )
+        except ValidationError as e:
+            for error in e.errors():
+                exc = CustomHttpException(
+                    status_code=400,
+                    message=error.get("msg") or "Invalid value",
+                    detail=e.json(),
+                )
+                logger.error(exc)
+                raise exc
 
         # update user
         user.updated_at = helper.timeNowEpoch()

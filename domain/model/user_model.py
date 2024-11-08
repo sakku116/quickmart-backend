@@ -29,7 +29,7 @@ class PublicUserModel(BaseModel):
     @field_validator("username", mode="before")
     def username_validator(cls, v):
         if " " in v:
-            raise ValidationError("username is not valid")
+            raise ValueError("username must not contain spaces")
 
         return v
 
@@ -42,12 +42,12 @@ class PublicUserModel(BaseModel):
             datetime.strptime(v, "%d-%m-%Y")
             return v
         except Exception as e:
-            raise ValidationError("birth_date is not valid")
+            raise ValueError("birth_date is not valid")
 
     @field_validator("email", mode="before")
     def email_validator(cls, v):
         if "@" not in v or " " in v:
-            raise ValidationError("email is not valid")
+            raise ValueError("email is not valid")
 
         return v
 
@@ -58,7 +58,7 @@ class PublicUserModel(BaseModel):
         else:
             valid = helper.isLanguageCodeValid(v)
             if not valid:
-                raise ValidationError("language is not valid")
+                raise ValueError("language is not valid")
 
         return v
 
@@ -69,7 +69,7 @@ class PublicUserModel(BaseModel):
         else:
             valid = helper.isCurrencyCodeValid(v)
             if not valid:
-                raise ValidationError("currency is not valid")
+                raise ValueError("currency is not valid")
 
         return v
 
