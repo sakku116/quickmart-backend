@@ -25,5 +25,9 @@ class Env:
 
     MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
     MONGODB_NAME: str = os.getenv("MONGODB_NAME", "quickmart")
+    MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+    MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "")
+    MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "")
+    MINIO_SECURE: str = os.getenv("MINIO_SECURE", "false")
     GMAIL_SENDER_EMAIL: str = os.getenv("GMAIL_SENDER_EMAIL", "")
     GMAIL_SENDER_PASSWORD: str = os.getenv("GMAIL_SENDER_PASSWORD", "")
