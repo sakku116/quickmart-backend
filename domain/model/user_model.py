@@ -15,10 +15,10 @@ class PublicUserModel(BaseModel):
     username: str = ""
     email: str = ""
     email_verified: bool = False
-    phone_number: str = ""
+    phone_number: Optional[str] = None
     gender: Literal[USER_GENDER_ENUMS] = "male"
     birth_date: Optional[str] = None # DD-MM-YYYY
-    profile_picture: str = "" # filename
+    profile_picture: Optional[str] = None # filename
     language: str = "en"
     currency: str = "USD"
 
