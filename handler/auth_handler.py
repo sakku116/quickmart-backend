@@ -91,7 +91,9 @@ async def verify_email_send_otp(
     auth_service: auth_service.AuthService = Depends(),
 ):
     await auth_service.sendVerifyEmailOTP(current_user=current_user)
-    return generic_resp.RespData()
+    resp = generic_resp.RespData()
+    resp.meta.message = "6-digit verification code has been sent to your email address."
+    return resp
 
 
 @AuthRouter.post("/verify-email/verify-otp", response_model=generic_resp.RespData)
@@ -101,4 +103,6 @@ def verify_email_verify_otp(
     auth_service: auth_service.AuthService = Depends(),
 ):
     auth_service.verifyEmailOTP(current_user=current_user, payload=payload)
-    return generic_resp.RespData()
+    resp = generic_resp.RespData()
+    resp.meta.message = "Email verified successfully"
+    return resp
