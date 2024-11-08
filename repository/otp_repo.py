@@ -30,10 +30,26 @@ class OtpRepo:
 
     def getLatestByCreatedBy(self, created_by: str) -> Union[otp_model.OtpModel, None]:
         _return = list(
-            self.user_coll.find({"created_by": created_by}).sort("created_at", -1).limit(1)
+            self.user_coll.find({"created_by": created_by})
+            .sort("created_at", -1)
+            .limit(1)
+        )
+        return otp_model.OtpModel(**_return[0]) if len(_return) > 0 else None
+
+    def getUnverifiedByCreatedBy(
+        self, created_by: str
+    ) -> Union[otp_model.OtpModel, None]:
+        _return = list(
+            self.user_coll.find({"created_by": created_by, "verified": False})
+            .sort("created_at", -1)
+            .limit(1)
         )
         return otp_model.OtpModel(**_return[0]) if len(_return) > 0 else None
 
     def deleteManyByCreatedBy(self, created_by: str) -> int:
         _return = self.user_coll.delete_many({"created_by": created_by})
         return _return.deleted_count
+
+    def getById(self, id: str) -> Union[otp_model.OtpModel, None]:
+        _return = self.user_coll.find_one({"id": id})
+        return otp_model.OtpModel(**_return) if _return else None
